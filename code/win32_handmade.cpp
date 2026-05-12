@@ -1,4 +1,4 @@
-// TIME(dan): Quedo en 005 - 45m
+// TIME(dan): 005 - 1:25:00
 
 #include <windows.h>
 #include <stdint.h>
@@ -38,7 +38,7 @@ Win32GetWindowDimension(HWND Window)
 
 
 // TODO(dan): This is a global for now.
-GlobalVariable bool Running;
+GlobalVariable bool GlobalRunning;
 GlobalVariable Win32OffscreenBuffer GlobalBackBuffer;
 
 Internal void
@@ -101,9 +101,11 @@ Internal void
 Win32DisplayBufferInWindow(HDC DeviceContext, int WindowWidth, int WindowHeight,
         Win32OffscreenBuffer Buffer, int X, int Y, int Width, int Height)
 {
-    StretchDIBits(DeviceContext, 0, 0, WindowWidth, WindowHeight,
-                  0, 0, Buffer.Width, Buffer.Height, Buffer.Memory,
-                  &Buffer.Info, DIB_RGB_COLORS, SRCCOPY);
+    // TODO(dan): Aspect ratio correction
+    StretchDIBits(DeviceContext,
+            0, 0, WindowWidth, WindowHeight,
+            0, 0, Buffer.Width, Buffer.Height,
+            Buffer.Memory, &Buffer.Info, DIB_RGB_COLORS, SRCCOPY);
 }
 
 LRESULT CALLBACK
@@ -121,13 +123,13 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM WParam,
         case WM_DESTROY:
         {
             // TODO(dan): Handle this as error - Recreate Window?
-            Running = false;
+            GlobalRunning = false;
         } break;
 
         case WM_CLOSE:
         {
             // TODO(dan): Handle this with a message
-            Running = false;
+            GlobalRunning = false;
         } break;
 
         case WM_ACTIVATEAPP:
@@ -146,9 +148,8 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM WParam,
 
             Win32WindowDimension Dimension = Win32GetWindowDimension(Window);
             Win32DisplayBufferInWindow(DeviceContext, Dimension.Width,
-                                       Dimension.Height, GlobalBackBuffer,
-                                       X, Y, Dimension.Width,
-                                       Dimension.Height);
+                    Dimension.Height, GlobalBackBuffer, X, Y,
+                    Dimension.Width, Dimension.Height);
             EndPaint(Window, &Paint);
         } break;
 
@@ -162,8 +163,8 @@ Win32MainWindowCallback(HWND Window, UINT Message, WPARAM WParam,
 }
 
 int CALLBACK
-WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
-        PSTR CommandLine, int ShowCode)
+WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine,
+        int ShowCode)
 {
     // NOTE(dan): If there is no performance concern -> zero is initialization!
     WNDCLASS WindowClass = {};
@@ -184,28 +185,30 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 
         if (Window)
         {
+            HDC DeviceContext = GetDC(Window);
+
             int XOffset = 0;
             int YOffset = 0;
-            Running = true;
-            while (Running)
+
+            GlobalRunning = true;
+            while (GlobalRunning)
             {
                 // Note(dan): If this has a constructor, it will be called
                 MSG Message;
                 while (PeekMessage(&Message, 0, 0, 0, PM_REMOVE))
                 {
-                    if (Message.message == WM_QUIT) { Running = false; }
+                    if (Message.message == WM_QUIT) { GlobalRunning = false; }
                     TranslateMessage(&Message);
                     DispatchMessage(&Message);
                 }
+
                 RenderWeirdGradient(GlobalBackBuffer, XOffset, YOffset);
 
-                HDC DeviceContext = GetDC(Window);
                 Win32WindowDimension Dimension =
                     Win32GetWindowDimension(Window);
                 Win32DisplayBufferInWindow(DeviceContext, Dimension.Width,
                         Dimension.Height, GlobalBackBuffer, 0, 0,
                         Dimension.Width, Dimension.Height);
-                ReleaseDC(Window, DeviceContext);
 
                 ++XOffset;
                 ++YOffset;
