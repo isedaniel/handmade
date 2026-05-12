@@ -1,4 +1,4 @@
-// TIME(dan): 005 - 1:25:00
+// TIME(dan): 005 - 1:39:00
 
 #include <windows.h>
 #include <stdint.h>
@@ -55,10 +55,10 @@ RenderWeirdGradient(Win32OffscreenBuffer Buffer, int XOffset, int YOffset)
             // Pixel in memory: BB GG RR XX
             // Note(dan): Because of Little Endian: 0xXXRRGGBB
 
-            uint8_t Blue  = (X + XOffset);
+            uint8_t Red  = (X + XOffset);
             uint8_t Green = (Y + YOffset);
 
-            *Pixel++ = ((Green << 8) | Blue);
+            *Pixel++ = ((Green << 8) | (Red << 16) | (Green - Red));
         }
         Row += Buffer.Pitch;
     }
@@ -185,6 +185,7 @@ WinMain(HINSTANCE Instance, HINSTANCE PrevInstance, PSTR CommandLine,
 
         if (Window)
         {
+            // NOTE(dan): DC not shared, so it can be set once
             HDC DeviceContext = GetDC(Window);
 
             int XOffset = 0;
